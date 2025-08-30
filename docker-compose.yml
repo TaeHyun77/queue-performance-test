@@ -1,0 +1,88 @@
+services:
+  airdnb-prometheus:
+    image: prom/prometheus
+    container_name: airdnb-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring-net
+
+  # grafana
+  airdnb-local-grafana:
+    image: grafana/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - monitoring-net
+
+  mysql_exporter_service:
+    image: prom/mysqld-exporter:latest
+    container_name: mysql-exporter
+    restart: always
+    ports:
+      - "9104:9104"
+    command:
+      - "--mysqld.username=taehyun:0136"
+      - "--mysqld.address=host.docker.internal:3306"
+    networks:
+      - monitoring-net
+
+  test-kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: test-kafka
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@test-kafka:29093'
+
+      # 프로젝트는 로컬에서 실행중
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://test-kafka:9092,PLAINTEXT_HOST://localhost:29092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A=='
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+    networks:
+      monitoring-net:
+
+  test-kafka-cli:
+    image: confluentinc/cp-kafka:latest
+    container_name: test-kafka-cli
+    entrypoint: /bin/sh
+    tty: true
+    networks:
+      monitoring-net:
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8989:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local-single-broker
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=test-kafka:9092
+    networks:
+      monitoring-net:
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    ports:
+      - "9308:9308"
+    command: [ "--kafka.server=test-kafka:9092" ]
+    networks:
+      - monitoring-net
+    depends_on:
+      - test-kafka
+    restart: always
+
+networks:
+  monitoring-net:

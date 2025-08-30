@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+
+rule_files:
+scrape_configs:
+
+  # Prometheus 자신을 모니터링하여, localhost:9090/metrics에서 Prometheus 서버의 메트릭을 수집
+  # 즉, Prometheus는 15초마다 자기 자신( localhost:9090 ) 상태를 모니터링
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Spring Boot 애플리케이션 모니터링
+  # 15초마다 Spring Boot 애플리케이션(9292/actuator/prometheus) 상태를 모니터링
+  - job_name: "spring-actuator"
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:9292']
+
+  - job_name: "mysql"
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['mysql_exporter_service:9104']
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: [ 'kafka-exporter:9308' ]
