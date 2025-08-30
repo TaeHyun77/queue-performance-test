@@ -2,7 +2,7 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 단계별 대기열 시�
 
 1. DB 기반 동기적인 대기열 시스템
 
-   [ DB와 이벤트 간의 정합성이 맞지 않는 문제 ]<br>
+   [ DB와 이벤트 간의 정합성이 맞지 않는 문제 ]<br><br>
    ⇒ Kafka Connect인 MySQL Debezium을 통해 해결<br><br>
 
 
