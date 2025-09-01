@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Mono
 
 @Service
 class KafkaProducerService (
@@ -17,22 +18,30 @@ class KafkaProducerService (
     private val objectMapper: ObjectMapper
 ): Loggable {
 
-    fun sendMessage(queueType: String, userId: String) {
-        try {
-
-            val messageDto: KafkaMessageDto = KafkaMessageDto(queueType, userId)
-            val json: String = objectMapper.writeValueAsString(messageDto)
-
-            kafkaTemplate.send(topicName, queueType, json).whenComplete { result, ex ->
-                if (ex == null) {
-                    log.info { "Kafka produce success" }
-                }
-                else {
-                    log.error(ex) { "Kafka produce fail" }
+    fun sendMessage(
+        queueType: String,
+        userId: String
+    ): Mono<Void> {
+        return Mono.fromCallable {
+            val messageDto = KafkaMessageDto(queueType, userId)
+            objectMapper.writeValueAsString(messageDto)
+        }
+            .flatMap { json ->
+                val future = kafkaTemplate.send(topicName, queueType, json)
+                Mono.create<Void> { sink ->
+                    future.whenComplete { _, ex ->
+                        if (ex == null) {
+                            log.info { "Kafka produce success: $queueType - $userId" }
+                            sink.success()
+                        } else {
+                            log.error(ex) { "Kafka produce fail: $queueType - $userId" }
+                            sink.error(ex)
+                        }
+                    }
                 }
             }
-        } catch (e: JsonProcessingException) {
-            log.info { "직렬화 실패 : $e" }
-        }
+            .doOnError { e ->
+                log.error(e) { "Kafka 전송 중 오류 발생" }
+            }
     }
 }

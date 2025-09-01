@@ -84,5 +84,18 @@ services:
       - test-kafka
     restart: always
 
+  redis-exporter:
+    container_name: redis-exporter
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis://host.docker.internal:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      - airdnb-prometheus
+    networks:
+      - monitoring-net
+    restart: always
+
 networks:
   monitoring-net:

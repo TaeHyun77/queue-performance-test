@@ -1,14 +1,15 @@
 package com.example.QueueTest.queue
 
 import com.example.QueueTest.util.Loggable
-import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.reactive.ServerHttpResponse
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Mono
 import java.time.Instant
 
 @RequestMapping("/queue")
@@ -22,7 +23,7 @@ class QueueController(
     fun registerUser(
         @RequestParam("user_id") userId: String,
         @RequestParam(defaultValue = "reserve") queueType: String
-    ): Long {
+    ): Mono<Long> {
         val now = Instant.now()
         val enterTimestamp = now.epochSecond * 1_000_000_000L + now.nano
 
@@ -35,7 +36,7 @@ class QueueController(
         @RequestParam("user_id") userId: String,
         @RequestParam(defaultValue = "reserve") queueType: String,
         @RequestParam("queueCategory") queueCategory: String
-    ): Boolean {
+    ): Mono<Boolean> {
         return queueService.isExistUserInWaitOrAllow(userId, queueType, queueCategory)
     }
 
@@ -45,7 +46,7 @@ class QueueController(
         @RequestParam("user_id") userId: String,
         @RequestParam(defaultValue = "reserve") queueType: String,
         @RequestParam("queueCategory") queueCategory: String
-    ): Long? {
+    ): Mono<Long> {
         return queueService.searchUserRanking(userId, queueType, queueCategory)
     }
 
@@ -74,7 +75,7 @@ class QueueController(
     fun allowUser(
         @RequestParam(defaultValue = "reserve") queueType: String,
         @RequestParam("count") count: Long
-    ): Long? {
+    ): Mono<Long> {
         return queueService.allowUser(queueType, count)
     }
 
@@ -93,7 +94,7 @@ class QueueController(
     fun sendCookie(
         @RequestParam("user_id") userId: String,
         @RequestParam(defaultValue = "reserve") queueType: String,
-        response: HttpServletResponse
+        response: ServerHttpResponse
     ): ResponseEntity<String> {
         return queueService.sendCookie(userId, queueType, response)
     }
