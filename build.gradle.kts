@@ -21,9 +21,9 @@ repositories {
 }
 
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
-	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	implementation("org.springframework.boot:spring-boot-starter-web")
+	// webflux
+	implementation("org.springframework.boot:spring-boot-starter-webflux")
+
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	runtimeOnly("com.mysql:mysql-connector-j")
@@ -33,7 +33,8 @@ dependencies {
 
 	implementation("mysql:mysql-connector-java:8.0.33")
 
-	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+	// redis 의존성
+	implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
 
 	// kafka 의존성
 	implementation("org.springframework.kafka:spring-kafka")
@@ -44,7 +45,6 @@ dependencies {
 	implementation("io.micrometer:micrometer-registry-prometheus")
 
 	implementation("io.github.oshai:kotlin-logging-jvm:5.1.4")
-
 }
 
 kotlin {
