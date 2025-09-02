@@ -1,4 +1,4 @@
-package com.example.integrated.queueing.event
+package com.example.QueueTest.sse
 
 data class QueueEventPayload (
     val queueType: String?

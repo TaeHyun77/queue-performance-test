@@ -1,4 +1,4 @@
-package com.example.integrated.queueing.event
+package com.example.QueueTest.sse
 
 import com.example.QueueTest.queue.QueueService
 import com.example.QueueTest.util.Loggable
@@ -38,7 +38,9 @@ class SseEventService(
                                 mapOf("event" to "confirmed", "user_id" to userId)
                             )
 
-                            Mono.just(ServerSentEvent.builder(json).build())
+                            Mono.just(ServerSentEvent.builder(json)
+                                .event("confirmed")
+                                .build())
                         } else {
                             log.info { "대기열 확인 중..." }
                             queueService.searchUserRanking(userId, queueTypeBase, "wait")
@@ -56,8 +58,11 @@ class SseEventService(
                                         )
                                     }
                                 }
-
-                                .map { json -> ServerSentEvent.builder(json).build() }
+                                .map { json ->
+                                    ServerSentEvent.builder(json)
+                                        .event("update")
+                                        .build()
+                                }
                         }
                     }
                     .onErrorResume { ex ->
@@ -66,7 +71,11 @@ class SseEventService(
                             mapOf("event" to "error", "message" to "서버 오류 발생")
                         )
 
-                        Mono.just(ServerSentEvent.builder(errorJson).build())
+                        Mono.just(
+                            ServerSentEvent.builder(errorJson)
+                                .event("error")
+                                .build()
+                        )
                     }
             }
     }

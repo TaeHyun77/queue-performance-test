@@ -46,7 +46,7 @@ class QueueService (
                 if (exists) {
                     Mono.error(ReserveException(HttpStatus.BAD_REQUEST, ErrorCode.ALREADY_REGISTERED_USER))
 
-                    // 존재하지 않는 경우
+                // 존재하지 않는 경우
                 } else {
                     reactiveRedisTemplate.opsForZSet()
                         .add(key, userId, enterTimestamp.toDouble())
@@ -166,14 +166,13 @@ class QueueService (
         }
     }
 
-
     fun sendCookie(
         userId: String, queueType: String, response: ServerHttpResponse
     ): ResponseEntity<String> {
 
         val encodedName = URLEncoder.encode(userId, StandardCharsets.UTF_8)
         val token = generateAccessToken(userId, queueType)
-        val cookieName = "$queueType + _user-access-cookie_$encodedName"
+        val cookieName = queueType + "_user-access-cookie_" + "$encodedName"
 
         val responseCookie = ResponseCookie.from(cookieName, token)
             .path("/")
