@@ -1,5 +1,6 @@
 package com.example.QueueTest.queue
 
+import com.example.QueueTest.idempotency.Idempotency
 import com.example.QueueTest.util.Loggable
 import org.springframework.http.ResponseEntity
 import org.springframework.http.server.reactive.ServerHttpResponse
@@ -22,12 +23,13 @@ class QueueController(
     @PostMapping("/register")
     fun registerUser(
         @RequestParam("user_id") userId: String,
-        @RequestParam(defaultValue = "reserve") queueType: String
-    ): Mono<Long> {
+        @RequestParam(defaultValue = "reserve") queueType: String,
+        @RequestParam("idempotencyKey") idempotencyKey: String
+    ): Mono<ResponseEntity<String>> {
         val now = Instant.now()
         val enterTimestamp = now.epochSecond * 1_000_000_000L + now.nano
 
-        return queueService.registerUserToWaitQueue(userId, queueType, enterTimestamp)
+        return queueService.register(userId, queueType, enterTimestamp, idempotencyKey)
     }
 
     // 대기열 or 참가열에서 사용자 존재 유무 확인
