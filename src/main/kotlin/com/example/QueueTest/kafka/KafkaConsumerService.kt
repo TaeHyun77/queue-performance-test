@@ -1,9 +1,9 @@
 package com.example.QueueTest.kafka
 
-import com.example.QueueTest.queue.QueueService
+import com.example.QueueTest.sse.QueueEventPayload
+import com.example.QueueTest.sse.SseEventService
 import com.example.QueueTest.util.Loggable
-import com.example.integrated.queueing.event.QueueEventPayload
-import com.example.integrated.queueing.event.SseEventService
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Service
