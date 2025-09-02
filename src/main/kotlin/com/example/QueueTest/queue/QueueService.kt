@@ -1,5 +1,7 @@
 package com.example.QueueTest.queue
 
+import com.example.QueueTest.idempotency.Idempotency
+import com.example.QueueTest.idempotency.IdempotencyService
 import com.example.QueueTest.kafka.KafkaProducerService
 import com.example.QueueTest.util.ACCESS_TOKEN
 import com.example.QueueTest.util.ALLOW_QUEUE
@@ -26,12 +28,25 @@ import java.time.Instant
 @Service
 class QueueService (
     private val kafkaProducerService: KafkaProducerService,
-    private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>
+    private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>,
+    private val idempotencyService: IdempotencyService
 ): Loggable {
+
+    fun register(
+        userId: String, queueType: String, enterTimestamp: Long, idempotencyKey: String
+    ): Mono<ResponseEntity<String>> {
+        return idempotencyService.execute(
+            key = idempotencyKey,
+            url = "/queue/register",
+            method = "POST",
+        ) {
+            registerUserToWaitQueue(userId, queueType, enterTimestamp)
+        }
+    }
 
     fun registerUserToWaitQueue(
         userId: String, queueType: String, enterTimestamp: Long
-    ): Mono<Long> {
+    ): Mono<String> {
         val key = "$queueType$WAIT_QUEUE"
 
         val userExists = Mono.zip(
@@ -59,7 +74,7 @@ class QueueService (
                 reactiveRedisTemplate.opsForZSet()
                     .rank(key, userId)
                     .switchIfEmpty(Mono.just(-1L))
-                    .map { it + 1 }
+                    .map { "REGISTERED" }
                     .flatMap { rank ->
                         kafkaProducerService.sendMessage(queueType, userId).thenReturn(rank)
                     }
