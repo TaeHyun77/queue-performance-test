@@ -40,6 +40,10 @@ dependencies {
 
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
 
+	// 코루틴
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.3")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.6.3")
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-registry-prometheus")
 

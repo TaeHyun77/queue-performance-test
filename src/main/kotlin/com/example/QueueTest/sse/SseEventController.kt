@@ -1,6 +1,7 @@
 package com.example.QueueTest.sse
 
 import com.example.QueueTest.util.Loggable
+import kotlinx.coroutines.flow.Flow
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerSentEvent
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,7 +18,7 @@ class SseEventController(
     fun streamQueue(
         @RequestParam userId: String,
         @RequestParam queueType: String
-    ): Flux<ServerSentEvent<String>> {
+    ): Flow<ServerSentEvent<String>> {
 
         return sseEventService.streamQueueEvents(userId, queueType)
     }

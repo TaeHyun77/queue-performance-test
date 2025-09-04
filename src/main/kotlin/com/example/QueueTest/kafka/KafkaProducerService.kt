@@ -18,30 +18,20 @@ class KafkaProducerService (
     private val objectMapper: ObjectMapper
 ): Loggable {
 
-    fun sendMessage(
-        queueType: String,
-        userId: String
-    ): Mono<Void> {
-        return Mono.fromCallable {
-            val messageDto = KafkaMessageDto(queueType, userId)
-            objectMapper.writeValueAsString(messageDto)
-        }
-            .flatMap { json ->
-                val future = kafkaTemplate.send(topicName, queueType, json)
-                Mono.create<Void> { sink ->
-                    future.whenComplete { _, ex ->
-                        if (ex == null) {
-                            log.info { "Kafka produce success: $queueType - $userId" }
-                            sink.success()
-                        } else {
-                            log.error(ex) { "Kafka produce fail: $queueType - $userId" }
-                            sink.error(ex)
-                        }
-                    }
+    fun sendMessage(queueType: String) {
+        try {
+            val message = KafkaMessageDto(queueType)
+            val json = objectMapper.writeValueAsString(message)
+
+            kafkaTemplate.send(topicName, queueType, json).whenComplete { _, ex ->
+                if (ex == null) {
+                    log.info { "Kafka 메세지 전송 성공" }
+                } else {
+                    log.error {"Kafka 메세지 전송 실패" }
                 }
             }
-            .doOnError { e ->
-                log.error(e) { "Kafka 전송 중 오류 발생" }
-            }
+        } catch (e: JsonProcessingException) {
+            log.error("직렬화 실패: {}", e.message)
+        }
     }
 }
