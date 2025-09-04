@@ -17,13 +17,11 @@ class KafkaConsumerService (
     fun consume(message: String) {
         try {
             val messageDto: KafkaMessageDto = objectMapper.readValue(message, KafkaMessageDto::class.java)
-
             val queueType: String = messageDto.queueType
-            val userId: String = messageDto.userId
 
             SseEventService.sink.tryEmitNext(QueueEventPayload(queueType))
 
-            log.info { "${"Kafka consume - queueType: {} , userId : {}"} $queueType $userId"};
+            log.info { "${"Kafka consume - queueType: {}"} $queueType"};
         } catch (e: Exception) {
             log.error(e) { "Kafka 메시지 consume 실패" };
         }

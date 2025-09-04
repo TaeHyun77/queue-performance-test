@@ -3,11 +3,15 @@ package com.example.QueueTest.sse
 import com.example.QueueTest.queue.QueueService
 import com.example.QueueTest.util.Loggable
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.reactive.asFlow
 import org.springframework.http.codec.ServerSentEvent
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import reactor.core.publisher.Sinks
+import kotlin.compareTo
 
 @Service
 class SseEventService(
@@ -19,64 +23,60 @@ class SseEventService(
         val sink: Sinks.Many<QueueEventPayload> = Sinks.many().replay().limit(1)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun streamQueueEvents(
         userId: String,
         queueType: String
-    ): Flux<ServerSentEvent<String>> {
+    ): Flow<ServerSentEvent<String>> {
 
-        val queueTypeBase = queueType.split(":")[0]
+        return sink.asFlux().asFlow()
+            .flatMapConcat {
+                flow {
+                    try {
+                        log.info{ "sink 이벤트 연결 !" }
+                        val queueType = queueType.split(":")[0]
 
-        return sink.asFlux()
-            .flatMap { payload ->
-                log.info { "sink 이벤트 수신!" }
+                        val isAllowed = queueService.searchUserRanking(userId, queueType, "allow")
 
-                queueService.searchUserRanking(userId, queueTypeBase, "allow")
-                    .flatMap { allowRank ->
-                        if (allowRank > 0) {
-                            log.info { "참가열 존재!" }
+                        // 참가열에 존재한다면 → confirmed 이벤트 전송 → 타겟 페이지 이동
+                        if (isAllowed != -1L) {
+                            log.info{ "참가열 존재 !" }
+
                             val json = objectMapper.writeValueAsString(
-                                mapOf("event" to "confirmed", "user_id" to userId)
+                                mapOf("event" to "confirmed", "userId" to userId)
                             )
 
-                            Mono.just(ServerSentEvent.builder(json)
-                                .event("confirmed")
-                                .build())
+                            emit(ServerSentEvent.builder(json).build())
+
+                            // 대기열에 존재한다면 순위 전송
                         } else {
-                            log.info { "대기열 확인 중..." }
-                            queueService.searchUserRanking(userId, queueTypeBase, "wait")
-                                .map { waitRank ->
-                                    if (waitRank <= 0) {
-                                        objectMapper.writeValueAsString(
-                                            mapOf(
-                                                "event" to "error",
-                                                "message" to "해당 사용자는 대기열에 존재하지 않습니다."
-                                            )
-                                        )
-                                    } else {
-                                        objectMapper.writeValueAsString(
-                                            mapOf("event" to "update", "rank" to waitRank)
-                                        )
-                                    }
-                                }
-                                .map { json ->
-                                    ServerSentEvent.builder(json)
-                                        .event("update")
-                                        .build()
-                                }
+                            log.info{ "대기열 존재 !" }
+
+                            val rank = queueService.searchUserRanking(userId, queueType, "wait")
+
+                            // 대기열에 존재하지 않는 경우
+                            val json = if (rank <= 0) {
+                                objectMapper.writeValueAsString(
+                                    mapOf("event" to "error", "message" to "해당 사용자는 대기열에 존재하지 않습니다.")
+                                )
+
+                                // 대기열에 존재하는 경우 → 사용자의 순위 반환
+                            } else {
+                                objectMapper.writeValueAsString(
+                                    mapOf("event" to "update", "rank" to rank)
+                                )
+                            }
+
+                            emit(ServerSentEvent.builder(json).build())
                         }
-                    }
-                    .onErrorResume { ex ->
-                        log.error(ex) { "streamQueueEvents 처리 중 오류 발생" }
+                    } catch (ex: Exception) {
                         val errorJson = objectMapper.writeValueAsString(
                             mapOf("event" to "error", "message" to "서버 오류 발생")
                         )
 
-                        Mono.just(
-                            ServerSentEvent.builder(errorJson)
-                                .event("error")
-                                .build()
-                        )
+                        emit(ServerSentEvent.builder(errorJson).build())
                     }
+                }
             }
     }
 }
