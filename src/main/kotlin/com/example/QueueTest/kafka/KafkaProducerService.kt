@@ -23,7 +23,7 @@ class KafkaProducerService (
             val message = KafkaMessageDto(queueType)
             val json = objectMapper.writeValueAsString(message)
 
-            kafkaTemplate.send(topicName, queueType, json).whenComplete { _, ex ->
+            kafkaTemplate.send(topicName, json).whenComplete { _, ex ->
                 if (ex == null) {
                     log.info { "Kafka 메세지 전송 성공" }
                 } else {

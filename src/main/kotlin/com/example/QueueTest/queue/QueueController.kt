@@ -21,7 +21,11 @@ import kotlin.collections.firstOrNull
 @RequestMapping("/queue")
 @RestController
 class QueueController (
-    private val queueService: QueueService
+    private val queueService: QueueService,
+
+    @Value("\${SERVER_NAME}")
+    private val serverName: String? = null
+
 ): Loggable {
 
     @PostMapping("/register/{userId}/{queueType}")
@@ -30,6 +34,8 @@ class QueueController (
         @PathVariable("queueType") queueType: String,
         request: ServerHttpRequest
     ): ResponseEntity<String> {
+
+        log.info { "server name: $serverName" }
 
         val now = Instant.now()
         val enterTimestamp = now.epochSecond * 1_000_000_000L + now.nano
