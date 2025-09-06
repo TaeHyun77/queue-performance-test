@@ -23,5 +23,5 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 단계별 대기열 시�
 
    단일 서버와 분산 환경에서의 성능 비교
 
-   Kafka 토픽 파티션의 개수에 따른 처리량 비교
+   Kafka 토픽 파티션의 개수에 따른 처리량 비교<br>
    ( consumer group 내의 서버의 개수 이상이어야 함 )
