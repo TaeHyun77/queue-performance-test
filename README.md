@@ -21,4 +21,7 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 단계별 대기열 시�
 
 5. 단일 서버에서 분산 환경으로 아키텍처를 변경
 
-   단일 서버와 분산 환경에서의 성능 비교   
+   단일 서버와 분산 환경에서의 성능 비교
+
+   Kafka 토픽 파티션의 개수에 따른 처리량 비교
+   ( consumer group 내의 서버의 개수 이상이어야 함 )
