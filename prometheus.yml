@@ -18,10 +18,10 @@ scrape_configs:
 
   # Spring Boot 애플리케이션 모니터링
   # 15초마다 Spring Boot 애플리케이션(9292/actuator/prometheus) 상태를 모니터링
-  - job_name: "spring-actuator"
+  - job_name: 'spring-actuator'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:9292']
+      - targets: [ 'test-queueing-back-1:8080', 'test-queueing-back-2:8080', 'test-queueing-back-3:8080' ]
 
   - job_name: "mysql"
     metrics_path: '/metrics'

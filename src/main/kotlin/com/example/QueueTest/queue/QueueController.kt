@@ -38,7 +38,7 @@ class QueueController (
         log.info { "server name: $serverName" }
 
         val now = Instant.now()
-        val enterTimestamp = now.epochSecond * 1_000_000_000L + now.nano
+        val enterTimestamp = now.epochSecond * 1_000_000L + now.nano / 1_000L
 
         val idempotencyKey: String = request.headers["Idempotency-key"]?.firstOrNull()
             ?: throw ReserveException(HttpStatus.BAD_REQUEST, ErrorCode.NOT_EXIST_IN_HEADER_IDEMPOTENCY_KEY)
