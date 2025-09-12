@@ -5,7 +5,7 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 개발 단계별 대기�
    [ DB와 이벤트 간의 정합성이 맞지 않는 문제 ]<br><br>
    ⇒ Kafka Connect인 MySQL Debezium을 통해 해결<br><br>
 
-   [ Number of thread : 3000 , Ramp up period : 1 ]
+   [ Number of thread : 3000 , Ramp up period : 1 ]<br>
    응답 속도 : 약 1 ~ 1.5초 , 최대 응답 속도 : 1.5 ~ 2초 , 초당 처리량 : 약 1500 TPS<br><br>
 
 
@@ -13,7 +13,7 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 개발 단계별 대기�
 
    기존의 사용자 상태 저장 DB를 제거하고, 직접 Kafka로 이벤트를 전달하는 방식으로 변경<br><br>
 
-   [ Number of thread : 3000 , Ramp up period : 1 ]
+   [ Number of thread : 3000 , Ramp up period : 1 ]<br>
    응답 속도 : 약 0.5초 이하 , 최대 응답 속도 : 1초 이하 , 초당 처리량 : 약 2000 ~ 2500 TPS<br><br>
 
    ⇒ 이전 대비 응답 속도는 약 50%, 초당 처리량은 약 30% 개선<br><br>
