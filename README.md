@@ -6,7 +6,7 @@ Jmeter, Spring Actuator, Prometheus, Grafana를 통해 개발 단계별 대기�
    ⇒ Kafka Connect인 MySQL Debezium을 통해 해결<br><br>
 
    [ Number of thread : 3000 , Ramp up period : 1 ]
-   응답 속도 : 약 1 ~ 1.5초 , 최대 응답 속도 : 1.5 ~ 2초 , 초당 처리량 : 약 1500 TPS
+   응답 속도 : 약 1 ~ 1.5초 , 최대 응답 속도 : 1.5 ~ 2초 , 초당 처리량 : 약 1500 TPS<br><br>
 
 
 3. DB를 제거하고 WefFlux 기반 비동기 아키텍처로 변경
