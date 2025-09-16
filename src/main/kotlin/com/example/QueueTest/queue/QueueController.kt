@@ -38,6 +38,8 @@ class QueueController (
         log.info { "server name: $serverName" }
 
         val now = Instant.now()
+
+        // 초 값 → 마이크로초 , 나노초 값 → 마이크로초
         val enterTimestamp = now.epochSecond * 1_000_000L + now.nano / 1_000L
 
         val idempotencyKey: String = request.headers["Idempotency-key"]?.firstOrNull()

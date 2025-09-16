@@ -21,7 +21,7 @@ class KafkaProducerService (
     fun sendMessage(queueType: String) {
         try {
             val message = KafkaMessageDto(queueType)
-            val json = objectMapper.writeValueAsString(message)
+            val json = objectMapper.writeValueAsString(message) // 객체를 JSON 형태의 문자열로 변환하여 produce
 
             kafkaTemplate.send(topicName, json).whenComplete { _, ex ->
                 if (ex == null) {
@@ -31,7 +31,7 @@ class KafkaProducerService (
                 }
             }
         } catch (e: JsonProcessingException) {
-            log.error("직렬화 실패: {}", e.message)
+            log.error {"직렬화 실패: ${e.message}"}
         }
     }
 }

@@ -10,6 +10,7 @@ import com.example.QueueTest.util.WAIT_QUEUE
 import com.example.integrated.reserveException.ErrorCode
 import com.example.integrated.reserveException.ReserveException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
@@ -57,33 +58,28 @@ class QueueService (
 
         // 두 비동기 작업이 모두 완료된 후에야 다음 로직이 실행됨
         coroutineScope {
-            val inWaitDeferred = async { searchUserRanking(userId, queueType, "wait") }
-            val inAllowDeferred = async { searchUserRanking(userId, queueType, "allow") }
 
-            // await() : 해당 async 작업의 결과가 나올 때까지 현재 코루틴을 일시 중단
-            val inWait = inWaitDeferred.await()
-            val inAllow = inAllowDeferred.await()
+            val (inWait, inAllow) = awaitAll(
+                async { searchUserRanking(userId, queueType, "wait") },
+                async { searchUserRanking(userId, queueType, "allow") }
+            )
 
             if (inWait != -1L || inAllow != -1L) {
                 throw ReserveException(HttpStatus.BAD_REQUEST, ErrorCode.ALREADY_REGISTERED_USER)
             }
         }
 
-        val waitQueueKey = queueType + WAIT_QUEUE
-
         val wasAdded = reactiveRedisTemplate.opsForZSet()
-            .add(waitQueueKey, userId, enterTimestamp.toDouble())
+            .add(queueType + WAIT_QUEUE, userId, enterTimestamp.toDouble())
             .awaitSingle() // true : add 성공 , false : add 실패 -> 이미 존재
 
         if (!wasAdded) {
             throw ReserveException(HttpStatus.BAD_REQUEST, ErrorCode.ALREADY_REGISTERED_USER)
         } else {
+            log.info { "대기열에 성공적으로 등록 완료 !" }
             // 대기열에 성공적으로 추가 되었다면 카프카 메세지 전송
             kafkaProducerService.sendMessage(queueType)
         }
-
-        val rank = searchUserRanking(userId, queueType, "wait")
-        log.info{"${userId}님 ${rank}번째로 사용자 대기열 등록 성공" }
 
         return "REGISTERED"
     }
@@ -99,7 +95,6 @@ class QueueService (
     ): Long {
 
         val keyType = if (queueCategory == "wait") WAIT_QUEUE else ALLOW_QUEUE
-
         val queueKey = queueType + keyType
 
         val redisRank = reactiveRedisTemplate.opsForZSet()
@@ -117,7 +112,11 @@ class QueueService (
         return rank
     }
 
-    suspend fun cancelUser(userId: String, queueType: String, queueCategory: String): ResponseEntity<String> {
+    suspend fun cancelUser(
+        userId: String,
+        queueType: String,
+        queueCategory: String
+    ): Boolean {
         return when (queueCategory) {
             "wait" -> cancelWaitOrAllow(userId, queueType)
             "allow" -> cancelAllowUser(userId, queueType)
@@ -131,68 +130,46 @@ class QueueService (
     * 승격 로직이 wait에서 사용자를 삭제하고 allow로 옮기기 전에 취소 로직이 allow에서 삭제를 진행하는 경우
     * ⇒ 이러한 타이밍으로 인한 경쟁 상태를 별도로 관리하여 문제를 해결
     * */
-    private suspend fun cancelWaitOrAllow(
+    suspend fun cancelWaitOrAllow(
         userId: String, queueType: String
-    ): ResponseEntity<String> {
+    ): Boolean {
         val waitQueueKey = "$queueType$WAIT_QUEUE"
 
-        val removedCount = reactiveRedisTemplate.opsForZSet()
+        val removedResult = reactiveRedisTemplate.opsForZSet()
             .remove(waitQueueKey, userId)
             .awaitSingle() // 0 : 해당 사용자 없음 , 1 : 해당 사용자 삭제
 
-        return if (removedCount == 1L) {
+        if (removedResult == 1L) {
             kafkaProducerService.sendMessage(queueType)
-            ResponseEntity.ok("대기열 삭제 완료")
-        } else {
-            val allowResult = cancelAllowUserForWaitContext(userId, queueType)
-
-            allowResult ?: run {
-                log.info { "이미 삭제가 처리된 사용자" }
-                ResponseEntity.ok("이미 삭제가 처리된 사용자입니다.")
-            }
+            log.info { "대기열 삭제 완료" }
+            return true
         }
-    }
 
-    // 경쟁 상태 문제로 인한 삭제 보완 로직
-    private suspend fun cancelAllowUserForWaitContext(
-        userId: String, queueType: String
-    ): ResponseEntity<String>? {
-        val allowQueueKey = "$queueType$ALLOW_QUEUE"
+        // 대기열에서 삭제 실패했다면 참가열에서 삭제 시도
+        val removedFromAllow = cancelAllowUser(userId, queueType)
 
-        val allowRemovedCount = reactiveRedisTemplate.opsForZSet()
-            .remove(allowQueueKey, userId)
-            .awaitSingle()
+        if (removedFromAllow){
+            log.info { "참가열 삭제 완료" }
+        } else {
+            log.info { "참가열 삭제 실패" }
+        }
 
-        // 승격 중 타이밍 문제로 간주
-        if (allowRemovedCount == 0L) return null
-
-        removeTtlKey(userId)
-        return ResponseEntity.ok("참가열 삭제 완료")
+        return removedFromAllow
     }
 
     suspend fun cancelAllowUser(
         userId: String,
-        queueType: String,
-    ): ResponseEntity<String> {
+        queueType: String
+    ): Boolean {
+        val allowQueueKey = "$queueType$ALLOW_QUEUE"
 
-        try {
-            val allowQueueKey = "$queueType$ALLOW_QUEUE"
+        val isRemoved = reactiveRedisTemplate.opsForZSet()
+            .remove(allowQueueKey, userId)
+            .awaitSingle() == 1L
 
-            val allowRemovedCount = reactiveRedisTemplate.opsForZSet()
-                .remove(allowQueueKey, userId)
-                .awaitSingle()
+        if (isRemoved) removeTtlKey(userId)
 
-            if (allowRemovedCount == 0L) {
-                throw ReserveException(HttpStatus.BAD_REQUEST, ErrorCode.USER_NOT_FOUND_IN_THE_QUEUE)
-            } else {
-                removeTtlKey(userId)
-                return ResponseEntity.ok("참가열 삭제 완료")
-            }
-
-        } catch (e: ReserveException) {
-            log.error { "예약 취소 중 오류 발생" }
-            throw e
-        }
+        return isRemoved
     }
 
     // TTL 키 삭제 로직
