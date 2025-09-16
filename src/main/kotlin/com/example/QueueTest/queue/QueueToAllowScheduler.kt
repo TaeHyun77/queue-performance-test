@@ -23,6 +23,7 @@ class QueueToAllowScheduler(
     private var moveToAllowInterval: Long
 ): CoroutineScope, Loggable {
 
+    private val queueTypes = listOf("reserve_공연A", "reserve_공연B", "reserve_공연C")
     private val job = SupervisorJob()
 
     // CoroutineScope를 구현 : 클래스 내부에서 지정한 coroutineContext를 기반으로 coroutine을 호출할 수 있음
@@ -38,16 +39,13 @@ class QueueToAllowScheduler(
         mode = TickerMode.FIXED_DELAY
     )
 
-    private val maxAllowedUsers = 3L
-    private val queueTypes = listOf("reserve_공연A", "reserve_공연B", "reserve_공연C")
-
     @PostConstruct
     fun start() {
         launch {
             tickerChannel.consumeEach {
                 try {
                     queueTypes.forEach { queueType ->
-                        val count = queueService.allowUser(queueType, maxAllowedUsers)
+                        val count = queueService.allowUser(queueType, 3L)
                         log.info { "$queueType 허용열로 이동한 사용자 : $count" }
                     }
                 } catch (e: Exception) {

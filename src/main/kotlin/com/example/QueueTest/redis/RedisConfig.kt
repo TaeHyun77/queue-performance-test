@@ -41,12 +41,13 @@ class RedisConfig(
         return ReactiveRedisTemplate(lettuceConnectionFactory(), context)
     }
 
+    // 레디스의 Pub/Sub 기능을 위한 리스너 컨테이너
     @Bean
     fun listenerContainer(
-        // 자동으로 lettuceConnectionFactory Bean이 주입됨
-        connectionFactory: ReactiveRedisConnectionFactory
+        // 위에서 등록한 lettuceConnectionFactory Bean이 주입됨
+        lettuceConnectionFactory: ReactiveRedisConnectionFactory
     ): ReactiveRedisMessageListenerContainer {
 
-        return ReactiveRedisMessageListenerContainer(connectionFactory)
+        return ReactiveRedisMessageListenerContainer(lettuceConnectionFactory)
     }
 }

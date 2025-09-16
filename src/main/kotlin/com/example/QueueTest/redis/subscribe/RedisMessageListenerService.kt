@@ -26,9 +26,9 @@ class RedisMessageListenerService(
         messageListenerContainer: ReactiveRedisMessageListenerContainer,
         channel: ChannelTopic
     ) {
-        val serializer = createChannelAndValueSerializer()
+        val serializer = channelAndValueSerializer()
 
-        // receive(...) 는 Redis pub/sub 채널 Listener를 Publisher로 생성하여 메시지가 들어올 때마다 Reactor 체인을 통해 지속적으로 전송
+        // receive(...)는 Redis pub/sub 채널 Listener를 Publisher로 생성하여 메시지가 들어올 때마다 Reactor 체인을 통해 지속적으로 전송
         messageListenerContainer
             .receive(listOf(channel), serializer, serializer)
             .flatMap {
@@ -44,7 +44,7 @@ class RedisMessageListenerService(
             .subscribe()
     }
 
-    private fun createChannelAndValueSerializer(): RedisSerializationContext.SerializationPair<String> {
+    private fun channelAndValueSerializer(): RedisSerializationContext.SerializationPair<String> {
         return RedisSerializationContext.SerializationPair.fromSerializer(StringRedisSerializer())
     }
 }

@@ -24,10 +24,11 @@ class KafkaConsumerService (
     @KafkaListener(topics = ["test_queueing_system"])
     fun consume(message: String, record: ConsumerRecord<String, String>) {
         try {
+            // objectMapper.readValue()는 Java 라이브러리인 Jackson의 메서드이기 때문에 java 객체로 변환
             val messageDto: KafkaMessageDto = objectMapper.readValue(message, KafkaMessageDto::class.java)
             val queueType: String = messageDto.queueType
 
-            log.info("Kafka consume - queueType: $queueType, topic: ${record.topic()}, partition : ${record.partition()}, consume-server-name: $serverName")
+            log.info {"Kafka consume - queueType: $queueType, topic: ${record.topic()}, partition : ${record.partition()}, consume-server-name: $serverName"}
 
             redisPublisher.publish(CHANNEL_NAME, queueType)
 
@@ -36,3 +37,4 @@ class KafkaConsumerService (
         }
     }
 }
+

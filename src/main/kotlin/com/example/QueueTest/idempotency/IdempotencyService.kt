@@ -2,10 +2,8 @@ package com.example.QueueTest.idempotency
 
 import com.example.QueueTest.util.Loggable
 import com.example.integrated.reserveException.ReserveException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -41,7 +39,7 @@ class IdempotencyService(
 
             val successMessage = process()
 
-            val newIdempotency = Idempotency(
+            val successIdempotency = Idempotency(
                 idempotencyKey = key,
                 url = url,
                 httpMethod = method,
@@ -50,14 +48,13 @@ class IdempotencyService(
                 expires_at = now.plusMinutes(10)
             )
 
-            withContext(Dispatchers.IO) {
-                idempotencyRepository.save(newIdempotency).awaitSingle()
-            }
-
+            // 단순히 save()만 호출하면 DB에 저장 요청이 날아가지 않음
+            idempotencyRepository.save(successIdempotency).awaitSingleOrNull()
             log.info { "멱등성 키 저장 (성공 요청) - key: $key, message: $successMessage" }
+
             ResponseEntity
-                .status(200)
-                .body(successMessage)
+                .status(successIdempotency.statusCode)
+                .body(successIdempotency.responseBody)
 
         } catch (e: ReserveException) {
             val failedIdempotency = Idempotency(
@@ -69,14 +66,12 @@ class IdempotencyService(
                 expires_at = now.plusMinutes(10)
             )
 
-            withContext(Dispatchers.IO) {
-                idempotencyRepository.save(failedIdempotency).awaitSingle()
-            }
-
+            idempotencyRepository.save(failedIdempotency).awaitSingleOrNull()
             log.info { "멱등성 키 저장 (실패 요청) - key: $key, message: ${e.errorCode.name}" }
+
             ResponseEntity
-                .status(e.status)
-                .body(e.errorCode.name)
+                .status(failedIdempotency.statusCode)
+                .body(failedIdempotency.responseBody)
         }
     }
 }
